@@ -2,6 +2,57 @@
 from telebot import types
 bot = telebot.TeleBot('6592342960:AAHxdaDACU-zERBDa2Y4E3IsMtvR4ZfXSI0')
 
+URL = "https://api.telegram.org/bot6592342960:AAHxdaDACU-zERBDa2Y4E3IsMtvR4ZfXSI0s/" % BOT_TOKEN
+MyURL = "https://example.com/hook"
+
+api = requests.Session()
+application = tornado.web.Application([
+    (r"/", Handler),
+])
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, signal_term_handler)
+    try:
+        set_hook = api.get(URL + "setWebhook?url=%s" % MyURL)
+        if set_hook.status_code != 200:
+            logging.error("Can't set hook: %s. Quit." % set_hook.text)
+            exit(1)
+        application.listen(8888)
+        tornado.ioloop.IOLoop.current().start()
+    except KeyboardInterrupt:
+        signal_term_handler(signal.SIGTERM, None)
+
+class Handler(tornado.web.RequestHandler):
+        def post(self):
+            try:
+                logging.debug("Got request: %s" % self.request.body)
+                update = tornado.escape.json_decode(self.request.body)
+                message = update['message']
+                text = message.get('text')
+                if text:
+                    logging.info("MESSAGE\t%s\t%s" % (message['chat']['id'], text))
+
+                    if text[0] == '/':
+                        command, *arguments = text.split(" ", 1)
+                        response = CMD.get(command, not_found)(arguments, message)
+                        logging.info("REPLY\t%s\t%s" % (message['chat']['id'], response))
+                        send_reply(response)
+            except Exception as e:
+                logging.warning(str(e))
+               
+def send_reply(response):
+    if 'text' in response:
+        api.post(URL + "sendMessage", data=response)
+        
+def help_message(arguments, message):
+    response = {'chat_id': message['chat']['id']}
+    result = ["Hey, %s!" % message["from"].get("first_name"),
+              "\rI can accept only these commands:"]
+    for command in CMD:
+        result.append(command)
+    response['text'] = "\n\t".join(result)
+    return response
+
 @bot.message_handler(commands = ['start'])
 def start(message):
 
