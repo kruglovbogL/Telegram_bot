@@ -1,8 +1,8 @@
 ﻿import telebot
 from telebot import types
-bot = telebot.TeleBot('6592342960:AAHxdaDACU-zERBDa2Y4E3IsMtvR4ZfXSI0')
+bot = telebot.TeleBot('YOUR_TOKEN')
 
-URL = "https://api.telegram.org/bot6592342960:AAHxdaDACU-zERBDa2Y4E3IsMtvR4ZfXSI0s/" % BOT_TOKEN
+URL = "https://api.telegram.org/botYOUR_TOKENs/" % BOT_TOKEN
 MyURL = "https://example.com/hook"
 
 api = requests.Session()
@@ -84,15 +84,16 @@ def url(message):
     markup.add(btn1)
     bot.send_message(message.from_user.id, "По кнопке ниже можно перейти на сайт", reply_markup = markup)
 
-@bot.message_handler(commands = ['launguage'])
-def start(message):
-
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn1 = types.KeyboardButton("🇷🇺 Русский")
-    btn2 = types.KeyboardButton('🇬🇧 English')
-    markup.add(btn1, btn2)
-    bot.send_message(message.from_user.id, "🇷🇺 Выберите язык / 🇬🇧 Choose your language", reply_markup=markup)
-
-
+@bot.message_handler(commands=['server'])
+def send_server(message):
+    try:
+        # по этому пути на сервере лежит скрипт сбора информации по статусу сервера
+        call(["/root/scrps/status.sh"])
+        # читает файл с результатами выполнения скрипта
+        status = open("/root/scrps/status.txt", "rb").read()
+        bot.send_message(message.chat.id, status, parse_mode="Markdown")
+    except Exception as e:
+        logger.exception(str(e))
+        bot.send_message(message.chat.id, "Ошибка при получении статуса сервера. Подробности в журнале.")
 
 bot.polling(none_stop=True, interval=0) #обязательная для работы бота часть
